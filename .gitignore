@@ -35,3 +35,4 @@ bin/
 *.exe
 *.out
 *.app
+/x64/Release
