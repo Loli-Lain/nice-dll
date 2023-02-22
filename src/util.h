@@ -6,14 +6,18 @@
 static CSimpleIni ini;
 
 namespace util {
+	const char* GetConfigServer();
 	VOID LoadConfig();
+	VOID SetTitle(const char* title);
+	std::string ReplaceUrl(std::string str);
 	static const char* ClientVersion;
-	static const char* ConfigChannel;
-	static const char* ConfigBaseUrl;
+	/*static const char* ConfigChannel;
+	static const char* MiHoYoSDKRes;*/
+	static const char* Server;
 	static const char* PublicRSAKey;
 	static const char* PrivateRSAKey;
 	const char* GetConfigChannel();
-	const char* GetConfigBaseUrl();
+	const char* GetMiHoYoSDKRes();
 	const char* GetPublicRSAKey();
 	const char* GetPrivateRSAKey();
 	bool GetEnableValue(const char* a_pKey, bool a_pDefault);

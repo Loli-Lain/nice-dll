@@ -3,3 +3,4 @@
 #include "pch.h"
 
 VOID InitDllMain(HMODULE *hModule);
+

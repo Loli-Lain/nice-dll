@@ -1,12 +1,74 @@
 #include "pch.h"
 #include "util.h"
 
+#include "resource.h"
+#include "b64.h"
+
 namespace util
 {
+    //const char* FAKEHOST = "https://example.com";
+
     HMODULE GetSelfModuleHandle()
     {
         MEMORY_BASIC_INFORMATION mbi;
         return ((::VirtualQuery(GetSelfModuleHandle, &mbi, sizeof(mbi)) != 0) ? (HMODULE)mbi.AllocationBase : NULL);
+    }
+
+    std::string ReplaceUrl(std::string str) {
+
+
+        std::regex pattern("(https?://[a-z0-9\\.\\-:]+)");
+
+        std::string::const_iterator iterStart = str.begin();
+        std::string::const_iterator iterEnd = str.end();
+        std::string temp;
+        std::smatch result;
+
+        while (std::regex_search(iterStart, iterEnd, result, pattern))
+        {
+            temp = result[0];
+            std::cout << "[regex] Replace: " << temp << " -> " << GetConfigServer() << std::endl;
+            iterStart = result[0].second;
+        }
+
+        return std::regex_replace(str.c_str(), pattern, GetConfigServer());
+    }
+
+
+    HWND playWindow = nullptr;
+    BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+    {
+        DWORD wndpid = 0;
+        GetWindowThreadProcessId(hwnd, &wndpid);
+
+        char szWindowClass[256]{};
+        GetClassNameA(hwnd, szWindowClass, 256);
+        if (!strcmp(szWindowClass, "UnityWndClass") && wndpid == *(DWORD*)lParam)
+        {
+            *(DWORD*)lParam = 0;
+
+            playWindow = hwnd;
+
+
+            std::cout << hwnd << std::endl;
+
+            return FALSE;
+
+        }
+
+        return TRUE;
+    }
+
+    VOID SetTitle(const char* title) {
+        while (playWindow==nullptr)
+        {
+            auto pid = GetCurrentProcessId();
+            EnumWindows(EnumWindowsProc, (LPARAM)&pid);
+        }
+        if (playWindow != nullptr) {
+            SendMessage(playWindow, WM_SETTEXT, NULL, (LPARAM)title);
+        }
+
     }
 
     const char* GetConfigPath()
@@ -17,10 +79,25 @@ namespace util
         return path.string().c_str();
     }
 
+    std::string GetCfgData() {
+        HMODULE hModule = GetSelfModuleHandle();
+        HRSRC hRsrc = FindResource(hModule, MAKEINTRESOURCE(IDR_MYINI1), "myini");
+
+        DWORD dwSize = SizeofResource(hModule, hRsrc);
+        HGLOBAL hGlobal = LoadResource(hModule, hRsrc);
+        LPVOID pBuffer = LockResource(hGlobal);
+        std::string s(_strdup((char*)pBuffer));
+        //std::cout << "[init] Config loaded " << (char*)pBuffer << std::endl;
+        return s;
+    }
+
+    
+
     VOID LoadConfig()
     {
         ini.SetUnicode();
-        ini.LoadFile(GetConfigPath());
+        //ini.LoadFile(GetConfigPath());
+        ini.LoadData(GetCfgData());
         if (GetEnableValue("EnableConsole", false)) {
             InitConsole();
         }
@@ -46,30 +123,39 @@ namespace util
                 }
             }
         }
-        ConfigChannel = ini.GetValue("Value", "ConfigChannel", nullptr);
-        ConfigBaseUrl = ini.GetValue("Value", "ConfigBaseUrl", nullptr);
+        /*ConfigChannel = ini.GetValue("Value", "ConfigChannel", nullptr);
+        MiHoYoSDKRes = ini.GetValue("Value", "MiHoYoSDKRes", nullptr);*/
+
+        Server = ini.GetValue("Value", "Server", nullptr);
         PublicRSAKey = ini.GetValue("Value", "PublicRSAKey", nullptr);
         PrivateRSAKey = ini.GetValue("Value", "PrivateRSAKey", nullptr);
+
+
     }
 
-    const char* GetConfigChannel()
+    /*const char* GetConfigChannel()
     {
         return ConfigChannel;
     }
 
-    const char* GetConfigBaseUrl()
+    const char* GetMiHoYoSDKRes()
     {
-        return ConfigBaseUrl;
+        return MiHoYoSDKRes;
+    }*/
+
+    const char* GetConfigServer() {
+       
+        return b64::base64_decode(Server);
     }
 
     const char* GetPublicRSAKey()
     {
-        return PublicRSAKey;
+        return b64::base64_decode(PublicRSAKey);
     }
 
     const char* GetPrivateRSAKey()
     {
-        return PrivateRSAKey;
+        return b64::base64_decode(PrivateRSAKey);
     }
 
     bool GetEnableValue(const char* a_pKey, bool a_nDefault)
